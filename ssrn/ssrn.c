@@ -524,6 +524,7 @@ void ssrn_network(void)
       if ('$' == c){
         rx_queue[input_rx_queue_idx].data[input_rx_buffer_idx++] = c;
         rx_state = RX_STATE_ACTIVE;
+        continue;
       }
     }
     if (RX_STATE_ACTIVE == rx_state){
