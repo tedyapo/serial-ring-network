@@ -346,7 +346,7 @@ static uint8_t process_packet(ssrn_packet_t *p)
   uint8_t *t = &p->data[20];
   if (ssrn_pkt_type_eq(t, "RESET")){
     // note: no reply packet from this
-    RESET();
+    ssrn_reset();
   } else if (ssrn_pkt_type_eq(t, "PING")){
     // reply format
     //                          type   id
