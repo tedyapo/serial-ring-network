@@ -28,6 +28,8 @@ static uint32_t netstack_inbound_drop_count;
 static uint32_t netstack_transmitted_count;
 static uint32_t netstack_tx_error_count;
 
+static ssrn_timer_t ssrn_timers[SSRN_NUM_TIMERS];
+
 static int8_t rx_queue_put_acquire(void)
 {
   if (rx_queue_items >= SSRN_RX_QUEUE_LEN){
@@ -333,8 +335,10 @@ uint8_t ssrn_pkt_type_eq(uint8_t *t, const char *c)
   }
 }
 
-static uint8_t process_packet(ssrn_packet_t *p)
+static uint8_t process_network_packet(ssrn_event_t *event)
 {
+  ssrn_packet_t *p = e->packet;
+
   // $SRN|-999|+000|NNNN|
   // 00000000001111111111
   // 01234567890123456789
@@ -348,6 +352,7 @@ static uint8_t process_packet(ssrn_packet_t *p)
     // note: no reply packet from this
     ssrn_reset();
   } else if (ssrn_pkt_type_eq(t, "PING")){
+    event->packet_class = SSRN_PACKET_CLASS_NETWORK;
     // reply format
     //                          type   id
     // $SRN|-999|+000|NNNN|PING|NNNNN|NNNNN|
@@ -360,6 +365,7 @@ static uint8_t process_packet(ssrn_packet_t *p)
     ssrn_pkt_ascii_uint32(p, ssrn_node_id(), 0);
     ssrn_pkt_str(p, "|*");
   } else if (ssrn_pkt_type_eq(t, "BAUD")){
+    event->packet_class = SSRN_PACKET_CLASS_NETWORK;
     // $SRN|-999|+000|NNNN|BAUD|NNNNNN|
     // 00000000001111111111222222222233
     // 01234567890123456789012345678901
@@ -392,6 +398,7 @@ static uint8_t process_packet(ssrn_packet_t *p)
     }
     // normal reply identical to request
   } else if (ssrn_pkt_type_eq(t, "PACKET-STATS")){
+    event->packet_class = SSRN_PACKET_CLASS_NETWORK;
     // $SRN|+NNN|+NNN|NNNN|PACKET-STATS|
     // 000000000011111111112222222222333
     // 012345678901234567890123456789012
@@ -406,6 +413,7 @@ static uint8_t process_packet(ssrn_packet_t *p)
     ssrn_pkt_char(p, '|');
     ssrn_pkt_char(p, '*');
   } else if (ssrn_pkt_type_eq(t, "ERROR-STATS")){
+    event->packet_class = SSRN_PACKET_CLASS_NETWORK;
     // $SRN|+NNN|+NNN|NNNN|ERROR-STATS|
     // 00000000001111111111222222222233
     // 01234567890123456789012345678901
@@ -422,6 +430,7 @@ static uint8_t process_packet(ssrn_packet_t *p)
     ssrn_pkt_char(p, '|');
     ssrn_pkt_char(p, '*');
   } else if (ssrn_pkt_type_eq(t, "RESET-STATS")){
+    event->packet_class = SSRN_PACKET_CLASS_NETWORK;
     // zero stat counters
     netstack_rx_error_count = 0;
     netstack_invalid_packet_count = 0;
@@ -433,23 +442,10 @@ static uint8_t process_packet(ssrn_packet_t *p)
     netstack_transmitted_count = 0;
     netstack_tx_error_count = 0;
     // reply identical to request
-  } else if (ssrn_local_packet(p)){
-    // node-specific requests
-  } else {
-    // repond to unknown packet type/request
-    p->write_ptr = p->data + 20;
-    ssrn_pkt_str(p, "UNKNOWN|*");
-  }
-
-  if (SSRN_ADDR_CODE_BROADCAST == p->dst_addr_code){
-    return 0;
-  } else {
-    // calculate checksum for packet
-    check_checksum(p->data, 1);
-    return 1;
   }
 }
 
+#if 0
 void ssrn_processing(void)
 {
   enum {PROCESSING_STATE_IDLE,
@@ -485,6 +481,164 @@ void ssrn_processing(void)
       } while (*s++ != '\n' && ++idx < SSRN_MAX_PACKET_LEN);
       in_queue_get_release();
       processing_state = PROCESSING_STATE_IDLE;
+    }
+  }
+}
+#endif 
+
+#ifdef SSRN_USE_TIMERS
+void ssrn_set_timer(uint8_t idx, uint32_t duration_milliseconds)
+{
+  if (idx < SSRN_NUM_TIMERS){
+    ssrn_timers[idx].begin_milliseconds = ssrn_milliseconds();
+    ssrn_timers[idx].duration_millisconds = duration_milliseconds;
+    ssrn_timers[idx].active = 1;
+  }
+}
+
+void ssrn_cancel_timer(uint8_t idx)
+{
+  if (idx < SSRN_NUM_TIMERS){
+    ssrn_timers[idx].active = 0;
+  }
+}
+#endif //#ifdef SSRN_USE_TIMERS
+
+// example event loop will flush out API issues
+#define LED_TIMER SSRN_TIMER0
+void main()
+{
+  while(1){
+    ssrn_event_t *event = ssrn_next_event();
+    if (SSRN_EVENT_TIMER == event->type){
+      // if the LED on timer expired, turn the LED off
+      if (LED_TIMER == event->timer_idx){
+        led_off();
+      }
+    } else if (SSRN_EVENT_PACKET == event->type){
+      uint8_t *t = &event->packet->data[20];
+      if (ssrn_pkt_type_eq(t, "LED-ON")){
+        led_on();
+        // reply identical to request
+      } else if (ssrn_pkt_type_eq(t, "LED-OFF")){
+        led_off();
+        // reply identical to request
+      } else if (ssrn_pkt_type_eq(t, "LED-BLINK")){
+        // dedicate timer0 to LED blinking
+        led_on();
+        ssrn_set_timer(LED_TIMER, 100);
+
+        // !!! example only; no reply to this packet
+        ssrn_no_reply(event);
+      } else if (ssrn_pkt_type_eq(t, "READ")){
+        uint16_t value = analogRead(A0);
+        
+        // $SRN|+NNN|+NNN|NNNN|READ|
+        // 0000000000111111111122222
+        // 0123456789012345678901234
+        p->write_ptr = p->data + 25;
+        ssrn_pkt_ascii_uint32(p, value, 0);
+        ssrn_pkt_str(p, "|*");
+      } else {
+        ssrn_unknown_packet(event);
+      }
+    }      
+  }
+}
+
+void ssrn_no_reply(ssrn_event_t *event)
+{
+  event->packet_has_reply = 0;
+}
+
+void ssrn_unknown_packet(ssrn_event_t *event)
+{
+  event->packet_class = SSRN_PACKET_CLASS_UNKNOWN;
+}
+
+ssrn_event_t *ssrn_next_event(void)
+{
+  enum {PROCESSING_STATE_IDLE,
+        PROCESSING_STATE_ACTIVE,
+        PROCESSING_STATE_USER,
+        PROCESSING_STATE_OUTPUT_WAIT};
+  static uint8_t processing_state = PROCESSING_STATE_IDLE;
+  static int8_t in_queue_idx;
+  static ssrn_event_t timer_event;
+  static ssrn_event_t packet_event;
+
+  while(1){
+    ssrn_network();
+
+#ifdef SSRN_USE_TIMERS
+    // process timer events first
+    for (uint8_t i=0; i<SSRN_NUM_TIMERS; i++){
+      if (ssrn_timers[i].active &&
+          (ssrn_milliseconds() - ssrn_timers[i].begin_milliseconds) >=
+          ssrn_timers[i].duration_milliseconds){
+        ssrn_timers[i].active = 0;
+        timer_event.type = SSRN_EVENT_TIMER;
+        timer_event.timer_idx = i;
+        return &timer_event;
+      }
+    }
+#endif //#ifdef SSRN_USE_TIMERS
+
+    if (PROCESSING_STATE_IDLE == processing_state){
+      in_queue_idx = in_queue_get_acquire();
+      if (in_queue_idx >= 0){
+        packet_event.type = SSRN_EVENT_PACKET;
+        packet_event.packet = &in_queue[in_queue_idx];
+        packet_event.packet_class = SSRN_PACKET_CLASS_UNKNONW;
+        if (SSRN_ADDR_CODE_BROADCAST == packet_event.packet->dst_addr_code){
+          packet_event.packet_has_reply = 0;
+        } else {
+          packet_event.packet_has_reply = 1;
+        }
+        process_network_packet(&packet_event);
+        if (PACKET_CLASS_NETWORK == packet_event.packet_class){
+          if (packet_event.packet_has_reply){
+            processing_state = PROCESSING_STATE_OUTPUT_WAIT;
+          } else {
+            in_queue_get_release();
+            processing_state = PROCESSING_STATE_IDLE;
+          }
+        } else {
+          processing_state = PROCESSING_STATE_USER;        
+          return &packet_event;
+        }
+      }
+    }
+    
+    if (PROCESSING_STATE_USER == processing_state){
+      if (SSRN_PACKET_CLASS_UNKNOWN == packet_event.packet_class){
+        // repond to unknown packet type/request
+        packet_event.packet->write_ptr = packet_event.packet->data + 20;
+        ssrn_pkt_str(packet_event.packet, "UNKNOWN|*");
+        processing_state = PROCESSING_STATE_OUTPUT_WAIT;
+      } else if (packet_event.packet_has_reply){
+        processing_state = PROCESSING_STATE_OUTPUT_WAIT;
+      } else {
+        in_queue_get_release();
+        processing_state = PROCESSING_STATE_IDLE;
+      }
+    }
+    
+    if (PROCESSING_STATE_OUTPUT_WAIT == processing_state){
+      int tx_queue_idx = tx_queue_put();
+      if (tx_queue_idx >= 0){
+        // calculate checksum for packet
+        check_checksum(in_queue[in_queue_idx].data, 1);
+        // copy packet to output queue
+        uint8_t idx = 0;
+        uint8_t *s = in_queue[in_queue_idx].data; 
+        uint8_t *d = tx_queue[tx_queue_idx].data;
+        do {
+          *d++ = *s;
+        } while (*s++ != '\n' && ++idx < SSRN_MAX_PACKET_LEN);
+        in_queue_get_release();
+        processing_state = PROCESSING_STATE_IDLE;
+      }
     }
   }
 }

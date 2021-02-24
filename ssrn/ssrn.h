@@ -21,6 +21,29 @@ typedef struct
   uint8_t data[SSRN_MAX_PACKET_LEN];
 } ssrn_packet_t;
 
+typedef enum {SSRN_EVENT_PACKET,
+              SSRN_EVENT_TIMER} ssrn_event_type_t;
+
+typedef enum {SSRN_PACKET_CLASS_UNKNOWN,
+              SSRN_PACKET_CLASS_NETWORK,
+              SSRN_PACKET_CLASS_USER} ssrn_packet_class_t;
+
+typedef struct
+{
+  ssrn_event_type_t type;
+  uint8_t timer_idx;
+  ssrn_packet_t *packet;
+  ssrn_packet_class_t packet_class;
+  uint8_t packet_has_reply;
+} ssrn_event_t;
+
+typedef struct
+{
+  uint8_t active;
+  uint32_t begin_milliseconds;
+  uint32_t duration_milliseconds;
+} ssrn_timer_t;
+
 typedef enum {SSRN_BAUD_1200,
               SSRN_BAUD_2400,
               SSRN_BAUD_4800,
@@ -44,5 +67,15 @@ void ssrn_pkt_ascii_uint32(ssrn_packet_t *p,
 void ssrn_network(void);
 void ssrn_processing(void);
 void ssrn_main_loop(void);
+
+#ifdef SSRN_USE_TIMERS
+void ssrn_set_timer(uint8_t idx, uint32_t duration_milliseconds);
+void ssrn_cancel_timer(uint8_t idx);
+#endif //#ifdef SSRN_USE_TIMERS
+
+ssrn_event_t *ssrn_next_event(void);
+
+void ssrn_no_reply(ssrn_event_t *event);
+void ssrn_unknown_packet(ssrn_event_t *event);
 
 #endif // #ifndef _SSRN_H_INCLUDED
