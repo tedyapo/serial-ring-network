@@ -84,3 +84,10 @@ void ssrn_init(AltSoftSerial *port)
   ssrn_port = port;
   ssrn_set_baud_rate(SSRN_DEFAULT_BAUD_RATE);
 }
+
+#ifdef SSRN_USE_TIMERS
+uint32_t ssrn_milliseconds(void)
+{
+  return millis();
+}
+#endif //#ifdef SSRN_USE_TIMERS

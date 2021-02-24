@@ -68,11 +68,6 @@ void ssrn_network(void);
 void ssrn_processing(void);
 void ssrn_main_loop(void);
 
-#ifdef SSRN_USE_TIMERS
-void ssrn_set_timer(uint8_t idx, uint32_t duration_milliseconds);
-void ssrn_cancel_timer(uint8_t idx);
-#endif //#ifdef SSRN_USE_TIMERS
-
 ssrn_event_t *ssrn_next_event(void);
 
 void ssrn_no_reply(ssrn_event_t *event);

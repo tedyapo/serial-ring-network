@@ -31,7 +31,6 @@ uint8_t ssrn_uart_tx_done(void);
 uint8_t ssrn_uart_read(void);
 void ssrn_uart_write(uint8_t c);
 void ssrn_set_baud_rate(ssrn_baud_rate_t rate);
-uint8_t ssrn_local_packet(ssrn_packet_t *p);
 void ssrn_init(AltSoftSerial *port);
 void ssrn_reset(void);
 
