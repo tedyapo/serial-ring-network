@@ -348,10 +348,10 @@ static void process_network_packet(ssrn_event_t *event)
   ssrn_pkt_str(p, "-999|+000");
 
   uint8_t *t = &p->data[20];
-  if (ssrn_pkt_type_eq(t, "RESET")){
+  if (ssrn_pkt_type_eq(t, "RESET|")){
     // note: no reply packet from this
     ssrn_reset();
-  } else if (ssrn_pkt_type_eq(t, "PING")){
+  } else if (ssrn_pkt_type_eq(t, "PING|")){
     event->packet_class = SSRN_PACKET_CLASS_NETWORK;
     // reply format
     //                          type   id
@@ -364,7 +364,7 @@ static void process_network_packet(ssrn_event_t *event)
     ssrn_pkt_char(p, '|');
     ssrn_pkt_ascii_uint32(p, ssrn_node_id(), 0);
     ssrn_pkt_str(p, "|*");
-  } else if (ssrn_pkt_type_eq(t, "BAUD")){
+  } else if (ssrn_pkt_type_eq(t, "BAUD|")){
     event->packet_class = SSRN_PACKET_CLASS_NETWORK;
     // $SRN|-999|+000|NNNN|BAUD|NNNNNN|
     // 00000000001111111111222222222233
@@ -397,7 +397,7 @@ static void process_network_packet(ssrn_event_t *event)
       ssrn_pkt_str(p, "UNKNOWN-BAUD|*");
     }
     // normal reply identical to request
-  } else if (ssrn_pkt_type_eq(t, "PACKET-STATS")){
+  } else if (ssrn_pkt_type_eq(t, "PACKET-STATS|")){
     event->packet_class = SSRN_PACKET_CLASS_NETWORK;
     // $SRN|+NNN|+NNN|NNNN|PACKET-STATS|
     // 000000000011111111112222222222333
@@ -412,7 +412,7 @@ static void process_network_packet(ssrn_event_t *event)
     ssrn_pkt_ascii_uint32(p, netstack_transmitted_count, 0);
     ssrn_pkt_char(p, '|');
     ssrn_pkt_char(p, '*');
-  } else if (ssrn_pkt_type_eq(t, "ERROR-STATS")){
+  } else if (ssrn_pkt_type_eq(t, "ERROR-STATS|")){
     event->packet_class = SSRN_PACKET_CLASS_NETWORK;
     // $SRN|+NNN|+NNN|NNNN|ERROR-STATS|
     // 00000000001111111111222222222233
@@ -429,7 +429,7 @@ static void process_network_packet(ssrn_event_t *event)
     ssrn_pkt_ascii_uint32(p, netstack_tx_error_count, 0);
     ssrn_pkt_char(p, '|');
     ssrn_pkt_char(p, '*');
-  } else if (ssrn_pkt_type_eq(t, "RESET-STATS")){
+  } else if (ssrn_pkt_type_eq(t, "RESET-STATS|")){
     event->packet_class = SSRN_PACKET_CLASS_NETWORK;
     // zero stat counters
     netstack_rx_error_count = 0;
