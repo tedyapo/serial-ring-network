@@ -35,7 +35,7 @@ void ssrn_init(void);
 void ssrn_reset(void);
 
 #ifdef SSRN_USE_TIMERS
-extern uint32_t ssrn_millisecond_counter;
+extern volatile uint32_t ssrn_millisecond_counter;
 uint32_t ssrn_milliseconds(void);
 void ssrn_set_timer_event(uint8_t idx, uint32_t duration_milliseconds);
 void ssrn_set_timer_callback(uint8_t idx,

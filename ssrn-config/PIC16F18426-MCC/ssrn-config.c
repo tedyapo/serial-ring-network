@@ -88,7 +88,7 @@ void ssrn_reset(void)
 }
 
 #ifdef SSRN_USE_TIMERS
-uint32_t ssrn_millisecond_counter;
+volatile uint32_t ssrn_millisecond_counter;
 
 uint32_t ssrn_milliseconds(void)
 {
