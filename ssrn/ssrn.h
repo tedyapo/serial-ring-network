@@ -37,11 +37,16 @@ typedef struct
   uint8_t packet_has_reply;
 } ssrn_event_t;
 
+typedef enum {SSRN_TIMER_TYPE_INACTIVE,
+              SSRN_TIMER_TYPE_EVENT,
+              SSRN_TIMER_TYPE_CALLBACK} ssrn_timer_type_t;
+
 typedef struct
 {
-  uint8_t active;
+  ssrn_timer_type_t type;
   uint32_t begin_milliseconds;
   uint32_t duration_milliseconds;
+  void (*callback)(void);
 } ssrn_timer_t;
 
 typedef enum {SSRN_BAUD_1200,

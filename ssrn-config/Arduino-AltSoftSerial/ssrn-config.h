@@ -36,7 +36,11 @@ void ssrn_reset(void);
 
 #ifdef SSRN_USE_TIMERS
 uint32_t ssrn_milliseconds(void);
-void ssrn_set_timer(uint8_t idx, uint32_t duration_milliseconds);
+void ssrn_set_timer_event(uint8_t idx, uint32_t duration_milliseconds);
+void ssrn_set_timer_callback(uint8_t idx,
+                             uint32_t duration_milliseconds,
+                             void (*callback)(void));
+
 void ssrn_cancel_timer(uint8_t idx);
 
 #if SSRN_NUM_TIMERS > 0

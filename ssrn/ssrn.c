@@ -487,19 +487,31 @@ void ssrn_processing(void)
 #endif 
 
 #ifdef SSRN_USE_TIMERS
-void ssrn_set_timer(uint8_t idx, uint32_t duration_milliseconds)
+void ssrn_set_timer_event(uint8_t idx, uint32_t duration_milliseconds)
 {
   if (idx < SSRN_NUM_TIMERS){
     ssrn_timers[idx].begin_milliseconds = ssrn_milliseconds();
     ssrn_timers[idx].duration_milliseconds = duration_milliseconds;
-    ssrn_timers[idx].active = 1;
+    ssrn_timers[idx].type = SSRN_TIMER_TYPE_EVENT;
+  }
+}
+
+void ssrn_set_timer_callback(uint8_t idx,
+                             uint32_t duration_milliseconds,
+                             void (*callback)(void))
+{
+  if (idx < SSRN_NUM_TIMERS){
+    ssrn_timers[idx].begin_milliseconds = ssrn_milliseconds();
+    ssrn_timers[idx].duration_milliseconds = duration_milliseconds;
+    ssrn_timers[idx].callback = callback;    
+    ssrn_timers[idx].type = SSRN_TIMER_TYPE_CALLBACK;
   }
 }
 
 void ssrn_cancel_timer(uint8_t idx)
 {
   if (idx < SSRN_NUM_TIMERS){
-    ssrn_timers[idx].active = 0;
+    ssrn_timers[idx].type = SSRN_TIMER_TYPE_INACTIVE;
   }
 }
 #endif //#ifdef SSRN_USE_TIMERS
@@ -532,13 +544,17 @@ ssrn_event_t *ssrn_next_event(void)
 #ifdef SSRN_USE_TIMERS
     // process timer events first
     for (uint8_t i=0; i<SSRN_NUM_TIMERS; i++){
-      if (ssrn_timers[i].active &&
+      if (SSRN_TIMER_TYPE_INACTIVE != ssrn_timers[i].type &&
           (ssrn_milliseconds() - ssrn_timers[i].begin_milliseconds) >=
           ssrn_timers[i].duration_milliseconds){
-        ssrn_timers[i].active = 0;
-        timer_event.type = SSRN_EVENT_TIMER;
-        timer_event.timer_idx = i;
-        return &timer_event;
+        ssrn_timers[i].type = SSRN_TIMER_TYPE_INACTIVE;
+        if (SSRN_TIMER_TYPE_EVENT == ssrn_timers[i].type){
+          timer_event.type = SSRN_EVENT_TIMER;
+          timer_event.timer_idx = i;
+          return &timer_event;
+        } else {
+          ssrn_timers[i].callback();
+        }
       }
     }
 #endif //#ifdef SSRN_USE_TIMERS
