@@ -335,7 +335,7 @@ uint8_t ssrn_pkt_type_eq(uint8_t *t, const char *c)
   }
 }
 
-static uint8_t process_network_packet(ssrn_event_t *event)
+static void process_network_packet(ssrn_event_t *event)
 {
   ssrn_packet_t *p = event->packet;
 
