@@ -82,7 +82,14 @@ void ssrn_init(void)
   INTERRUPT_PeripheralInterruptEnable();
 }
 
+void ssrn_reset(void)
+{
+  RESET();
+}
+
 #ifdef SSRN_USE_TIMERS
+uint32_t ssrn_millisecond_counter;
+
 uint32_t ssrn_milliseconds(void)
 {
   uint32_t milliseconds;

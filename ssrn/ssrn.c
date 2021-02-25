@@ -445,47 +445,6 @@ static void process_network_packet(ssrn_event_t *event)
   }
 }
 
-#if 0
-void ssrn_processing(void)
-{
-  enum {PROCESSING_STATE_IDLE,
-        PROCESSING_STATE_ACTIVE,
-        PROCESSING_STATE_OUTPUT_WAIT};
-  static uint8_t processing_state = PROCESSING_STATE_IDLE;
-  static int8_t in_queue_idx;
-
-  if (PROCESSING_STATE_IDLE == processing_state){
-    in_queue_idx = in_queue_get_acquire();
-    if (in_queue_idx >= 0){
-      processing_state = PROCESSING_STATE_ACTIVE;
-    }
-  }
-
-  if (PROCESSING_STATE_ACTIVE == processing_state){
-    if (process_packet(&in_queue[in_queue_idx])){
-      processing_state = PROCESSING_STATE_OUTPUT_WAIT;
-    } else {
-      in_queue_get_release();
-      processing_state = PROCESSING_STATE_IDLE;
-    }
-  }
-
-  if (PROCESSING_STATE_OUTPUT_WAIT == processing_state){
-    int tx_queue_idx = tx_queue_put();
-    if (tx_queue_idx >= 0){
-      uint8_t idx = 0;
-      uint8_t *s = in_queue[in_queue_idx].data; 
-      uint8_t *d = tx_queue[tx_queue_idx].data;
-      do {
-        *d++ = *s;
-      } while (*s++ != '\n' && ++idx < SSRN_MAX_PACKET_LEN);
-      in_queue_get_release();
-      processing_state = PROCESSING_STATE_IDLE;
-    }
-  }
-}
-#endif 
-
 #ifdef SSRN_USE_TIMERS
 void ssrn_set_timer_event(uint8_t idx, uint32_t duration_milliseconds)
 {
@@ -787,12 +746,3 @@ void ssrn_network(void)
     }
   }
 }
-
-void ssrn_main_loop(void)
-{
-  while(1){
-    ssrn_network();
-    ssrn_processing();
-  }
-}
-
