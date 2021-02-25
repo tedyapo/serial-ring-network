@@ -69,7 +69,10 @@ void ssrn_pkt_ascii_int32(ssrn_packet_t *p,
 void ssrn_pkt_ascii_uint32(ssrn_packet_t *p,
                            uint32_t value,
                            uint8_t decimal_place);
+
 void ssrn_network(void);
+#define ssrn_yield ssrn_network
+
 void ssrn_processing(void);
 void ssrn_main_loop(void);
 
