@@ -746,3 +746,20 @@ void ssrn_network(void)
     }
   }
 }
+
+void ssrn_yield(void)
+{
+  ssrn_network();
+  
+#ifdef SSRN_USE_TIMERS
+    // process timer callback events
+    for (uint8_t i=0; i<SSRN_NUM_TIMERS; i++){
+      if (SSRN_TIMER_TYPE_CALLBACK == ssrn_timers[i].type &&
+          (ssrn_milliseconds() - ssrn_timers[i].begin_milliseconds) >=
+          ssrn_timers[i].duration_milliseconds){
+        ssrn_timers[i].type = SSRN_TIMER_TYPE_INACTIVE;
+        ssrn_timers[i].callback();
+      }
+    }
+#endif //#ifdef SSRN_USE_TIMERS
+}
