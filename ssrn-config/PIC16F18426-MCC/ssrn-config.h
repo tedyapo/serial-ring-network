@@ -33,6 +33,7 @@ void ssrn_set_baud_rate(ssrn_baud_rate_t rate);
 uint8_t ssrn_local_packet(ssrn_packet_t *p);
 void ssrn_init(void);
 void ssrn_reset(void);
+void ssrn_idle(void);
 
 #ifdef SSRN_USE_TIMERS
 extern volatile uint32_t ssrn_millisecond_counter;

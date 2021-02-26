@@ -77,6 +77,15 @@ void ssrn_set_baud_rate(ssrn_baud_rate_t rate)
 void ssrn_init(void)
 {
   SYSTEM_Initialize();
+  // set power-down bits for unused peripherals
+  PMD0 = 0x47;
+  PMD1 = 0x78;
+  PMD2 = 0x80;
+  PMD3 = 0x67;
+  PMD4 = 0x6e;
+  PMD5 = 0x60;
+  PMD6 = 0x03;
+  PMD7 = 0x3f;
   ssrn_set_baud_rate(SSRN_DEFAULT_BAUD_RATE);
   INTERRUPT_GlobalInterruptEnable();
   INTERRUPT_PeripheralInterruptEnable();
@@ -85,6 +94,14 @@ void ssrn_init(void)
 void ssrn_reset(void)
 {
   RESET();
+}
+
+void ssrn_idle(void)
+{
+  if(0 == eusart1RxCount){
+    IDLEN = 1;
+    SLEEP();
+  }
 }
 
 #ifdef SSRN_USE_TIMERS

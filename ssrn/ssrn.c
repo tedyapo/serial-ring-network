@@ -745,6 +745,12 @@ void ssrn_network(void)
       }
     }
   }
+
+  if (0 == rx_queue_items &&
+      0 == in_queue_items &&
+      0 == tx_queue_items){
+    ssrn_idle();
+  }
 }
 
 void ssrn_yield(void)
