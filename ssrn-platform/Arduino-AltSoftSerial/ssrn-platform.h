@@ -1,27 +1,9 @@
-#ifndef _SSRN_CONFIG_H
-#define _SSRN_CONFIG_H
-
-#define SSRN_USE_TIMERS
-#define SSRN_NUM_TIMERS 5
+#ifndef SSRN_PLATFORM_H
+#define SSRN_PLATFORM_H
 
 #include <Arduino.h>
 #include <AltSoftSerial.h>
-
-// turn off "unused function" warnings in xc8
-#pragma warning disable 520
-
 #include "ssrn.h"
-
-#include <stdint.h>
-
-#define SSRN_NODE_TYPE "ARDUINO-TEST"
-#define SSRN_NODE_ID   0x01
-
-#define SSRN_DEFAULT_BAUD_RATE SSRN_BAUD_1200
-
-#define SSRN_RX_QUEUE_LEN 2
-#define SSRN_IN_QUEUE_LEN 2
-#define SSRN_TX_QUEUE_LEN 2
 
 const char *ssrn_node_type(void);
 uint16_t ssrn_node_id(void);
@@ -83,4 +65,4 @@ void ssrn_cancel_timer(uint8_t idx);
 #endif
 #endif //#ifdef SSRN_USE_TIMERS
 
-#endif // #ifndef _SSRN_CONFIG_H
+#endif // #ifndef SSRN_PLATFORM_H

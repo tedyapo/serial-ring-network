@@ -1,4 +1,4 @@
-#include "ssrn-config.h"
+#include "ssrn.h"
 
 #define ALT_SOFT_SERIAL_TX_BUFFER_SIZE 68
 
