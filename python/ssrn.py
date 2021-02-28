@@ -76,7 +76,7 @@ class Packet:
 def _transmit_task(port, queue):
     while True:
         packet = queue.get()
-        print('tx: ', packet.data)
+        #print('tx: ', packet.data)
         port.write((packet.data + '\n').encode('ascii'))
 
 def _receive_task(port, queue):
@@ -85,10 +85,10 @@ def _receive_task(port, queue):
             data = port.read_until(b'\n').decode('ascii', errors='strict').rstrip()
         except UnicodeDecodeError:
             continue
-        print('rx: ' + data)
+        #print('rx: ' + data)
         packet = Packet()
         if packet.decode(data):
-            print('rx: ', packet.data)
+            #print('rx: ', packet.data)
             queue.put(packet)
 
 def _forwarding_task(input_queue, rx_queue, tx_queue):
@@ -141,6 +141,17 @@ class SSRN:
         while not self.tx_queue.empty():
             time.sleep(0.050)
         self.port.flush()
+
+    def send_timed(self, packet, ratio=-1):
+        self.tx_queue.put(packet)
+        if ratio < 1:
+            max_bits = 100 * 10 # !!! hard-coded max packet length
+        else:
+            max_bits = 10*(len(packet.data)+1)*ratio
+        delay = max_bits/self.port.baudrate
+        #print(delay)
+        time.sleep(delay)
+        
 
 # !!! to-do: create exception classes for network
     def hard_reset(self):

@@ -4,6 +4,7 @@ import sys
 import serial
 import time
 import threading
+import signal
 import ssrn
 
 port_device = sys.argv[1]
@@ -57,14 +58,19 @@ def processing_task(input_queue):
             print('inbound_drop_count = ', p.fields[8]);
             print('tx_error_count = ', p.fields[9]);
         lock.acquire()
-        print('received: ' + outstanding[int(p.fields[3])])
-        outstanding[int(p.fields[3])] = 'OK'
+
+        key = int(p.fields[3])
+        if key in outstanding:
+            print('received: ' + outstanding[int(p.fields[3])])
+            outstanding.pop(key, None)
+        else:
+            print('erroneous packet: ' + p.data)
         lock.release()
 
 network = ssrn.SSRN(port, type=ssrn.SSRN.CONTROLLER)
 t_proc = threading.Thread(target=processing_task,
                           args=(network.rx_queue,),
-                          daemon=False)
+                          daemon=True)
 t_proc.start()
 
 network.start()
@@ -82,12 +88,14 @@ network.hard_reset()
 time.sleep(1)
 
 print('sending')
+
 p = ssrn.Packet()
 data ='$SRN|+001|-999|%04d|RESET' % -2
 p.set_data(data)
 network.tx_queue.put(p)
 
-time.sleep(0.5)
+time.sleep(2)
+
 
 p = ssrn.Packet()
 data ='$SRN|+999|-999|%04d|BAUD|115200' % -3
@@ -103,31 +111,46 @@ network.set_baud(115200);
 
 
 p = ssrn.Packet()
-data ='$SRN|+001|-999|%04d|0STAT' % -2
+data ='$SRN|+001|-999|%04d|RESET-STATS' % -2
 p.set_data(data)
 lock.acquire()
 outstanding[-2] = ('seq%d:' % -2) + data
 lock.release()
 network.tx_queue.put(p)
 
-time.sleep(0.1)
+time.sleep(0.25)
 
-for seq_num in range(500000):
+missing = False
+missing_count = 0
+
+# setup signal handler to quit with current stats
+quit_signal = False
+def quit_handler(signum, frame):
+    global quit_signal
+    quit_signal = True
+
+signal.signal(signal.SIGINT, quit_handler)
+
+for seq_num in range(10000000):
+#for seq_num in range(10000):
+    if quit_signal:
+        break
     p = ssrn.Packet()
     if seq_num % 2:
-        data = '$SRN|+001|-999|%04d|PING' % (seq_num % 10000)
-        delay = 0.006
+        data = '$SRN|+001|-999|%04d|READ' % (seq_num % 10000)
     else:
         data ='$SRN|+001|-999|%04d|LED-BLINK' % (seq_num % 10000)
-        delay = 0.006
     p.set_data(data)
     lock.acquire()
-    outstanding[(seq_num%10000)] = ('seq%d:' % (seq_num % 10000)) + data
+    key = seq_num % 10000
+    if key in outstanding:
+        missing = True
+        missing_count += 1
+    outstanding[key] = ('seq%d:' % key) + data
     lock.release()
-    network.tx_queue.put(p)
-    time.sleep(delay)
+    network.send_timed(p, 1.7)
 
-time.sleep(1)
+time.sleep(0.25)
 
 p = ssrn.Packet()
 data ='$SRN|+001|-999|%04d|PACKET-STATS' % -1
@@ -137,7 +160,7 @@ outstanding[-1] = ('seq%d:' % -1) + data
 lock.release()
 network.tx_queue.put(p)
 
-time.sleep(0.1)
+time.sleep(0.25)
 
 p = ssrn.Packet()
 data ='$SRN|+001|-999|%04d|ERROR-STATS' % -4
@@ -147,22 +170,20 @@ outstanding[-4] = ('seq%d:' % -4) + data
 lock.release()
 network.tx_queue.put(p)
 
-time.sleep(0.1)
+time.sleep(3)
 
 lock.acquire()
 print()
-missing = False
-missing_count = 0
+
 for i in outstanding:
-    if 'OK' != outstanding[i]:
-        print('missing:', outstanding[i])
-        missing_count += 1
-        missing = True
+    print('missing:', outstanding[i])
+    missing_count += 1
+    missing = True
 lock.release()
 if not missing:
     print('all OK')
 else:
     print('missing: %d' % missing_count)
 
-t_proc.join()
+#t_proc.join()
     
