@@ -33,13 +33,21 @@ void ssrn_uart_write(uint8_t c);
 void ssrn_set_baud_rate(ssrn_baud_rate_t rate);
 void ssrn_init(AltSoftSerial *port);
 void ssrn_reset(void);
+void ssrn_idle(void);
 
 #ifdef SSRN_USE_TIMERS
 uint32_t ssrn_milliseconds(void);
 void ssrn_set_timer_event(uint8_t idx, uint32_t duration_milliseconds);
+void ssrn_delay_ms(uint32_t duration);
+void ssrn_set_timer_event(uint8_t idx,
+                          uint32_t duration_milliseconds,
+                          uint8_t periodic_flag);
 void ssrn_set_timer_callback(uint8_t idx,
                              uint32_t duration_milliseconds,
-                             void (*callback)(void));
+                             void (*callback)(void),
+                             uint8_t periodic_flag);
+
+void ssrn_cancel_timer(uint8_t idx);
 
 void ssrn_cancel_timer(uint8_t idx);
 

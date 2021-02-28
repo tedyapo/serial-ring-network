@@ -85,9 +85,25 @@ void ssrn_init(AltSoftSerial *port)
   ssrn_set_baud_rate(SSRN_DEFAULT_BAUD_RATE);
 }
 
+void ssrn_idle(void)
+{
+  // no idle mode
+}
+
 #ifdef SSRN_USE_TIMERS
 uint32_t ssrn_milliseconds(void)
 {
   return millis();
 }
+void ssrn_delay_ms(uint32_t duration);
+void ssrn_set_timer_event(uint8_t idx,
+                          uint32_t duration_milliseconds,
+                          uint8_t periodic_flag);
+void ssrn_set_timer_callback(uint8_t idx,
+                             uint32_t duration_milliseconds,
+                             void (*callback)(void),
+                             uint8_t periodic_flag);
+
+void ssrn_cancel_timer(uint8_t idx);
+
 #endif //#ifdef SSRN_USE_TIMERS
