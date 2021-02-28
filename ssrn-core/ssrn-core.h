@@ -1,5 +1,5 @@
-#ifndef _SSRN_H_INCLUDED
-#define _SSRN_H_INCLUDED
+#ifndef SSRN_CORE_H_INCLUDED
+#define SSRN_CORE_H_INCLUDED
 
 #include <stdint.h>
 
@@ -77,4 +77,4 @@ ssrn_event_t *ssrn_next_event(void);
 void ssrn_no_reply(ssrn_event_t *event);
 void ssrn_unknown_packet(ssrn_event_t *event);
 
-#endif // #ifndef _SSRN_H_INCLUDED
+#endif // #ifndef SSRN_CORE_H_INCLUDED

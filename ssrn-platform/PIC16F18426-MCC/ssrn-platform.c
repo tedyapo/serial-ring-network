@@ -1,4 +1,4 @@
-#include "ssrn-config.h"
+#include "ssrn.h"
 
 static const char _ssrn_node_type[] = SSRN_NODE_TYPE;
 static const uint16_t _ssrn_node_id = SSRN_NODE_ID;
@@ -15,27 +15,27 @@ uint16_t ssrn_node_id(void)
 
 uint8_t ssrn_uart_rx_available(void)
 {
-  return eusartRxCount;
+  return eusart1RxCount;
 }
 
 uint8_t ssrn_uart_tx_available(void)
 {
-  return eusartTxBufferRemaining;
+  return eusart1TxBufferRemaining;
 }
 
 uint8_t ssrn_uart_tx_done(void)
 {
-  return EUSART_is_tx_done();
+  return EUSART1_is_tx_done();
 }
 
 uint8_t ssrn_uart_read(void)
 {
-  return EUSART_Read();
+  return EUSART1_Read();
 }
 
 void ssrn_uart_write(uint8_t c)
 {
-  EUSART_Write(c);
+  EUSART1_Write(c);
 }
 
 void ssrn_set_baud_rate(ssrn_baud_rate_t rate)
@@ -77,7 +77,46 @@ void ssrn_set_baud_rate(ssrn_baud_rate_t rate)
 void ssrn_init(void)
 {
   SYSTEM_Initialize();
+
+  // set power-down bits for unused peripherals
+  PMD0 = 0x47;
+  PMD1 = 0x78;
+  PMD2 = 0x80;
+  PMD3 = 0x67;
+  PMD4 = 0x6e;
+  PMD5 = 0x60;
+  PMD6 = 0x03;
+  PMD7 = 0x3f;
+
   ssrn_set_baud_rate(SSRN_DEFAULT_BAUD_RATE);
+
   INTERRUPT_GlobalInterruptEnable();
   INTERRUPT_PeripheralInterruptEnable();
 }
+
+void ssrn_reset(void)
+{
+  RESET();
+}
+
+void ssrn_idle(void)
+{
+  if(0 == eusart1RxCount){
+    IDLEN = 1;
+    SLEEP();
+  }
+}
+
+#ifdef SSRN_USE_TIMERS
+volatile uint32_t ssrn_millisecond_counter;
+
+uint32_t ssrn_milliseconds(void)
+{
+  uint32_t milliseconds;
+  di();
+  milliseconds = ssrn_millisecond_counter;
+  ei();
+  return milliseconds;
+}
+#endif //#ifdef SSRN_USE_TIMERS
+

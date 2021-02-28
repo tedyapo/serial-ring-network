@@ -1,5 +1,4 @@
 #include "ssrn.h"
-#include "ssrn-config.h"
 
 static uint8_t baud_rate_change = 0;
 static uint8_t new_baud_rate = SSRN_DEFAULT_BAUD_RATE;
