@@ -30,6 +30,8 @@ static uint32_t netstack_tx_error_count;
 
 static ssrn_timer_t ssrn_timers[SSRN_NUM_TIMERS];
 
+static void ssrn_network(void);
+
 static int8_t rx_queue_put_acquire(void)
 {
   if (rx_queue_items >= SSRN_RX_QUEUE_LEN){
@@ -446,24 +448,43 @@ static void process_network_packet(ssrn_event_t *event)
 }
 
 #ifdef SSRN_USE_TIMERS
-void ssrn_set_timer_event(uint8_t idx, uint32_t duration_milliseconds)
+void ssrn_delay_ms(uint32_t duration)
+{
+  uint32_t begin = ssrn_milliseconds();
+  while ((ssrn_milliseconds() - begin) <= duration){
+    ssrn_network();
+  }
+}
+
+void ssrn_set_timer_event(uint8_t idx,
+                          uint32_t duration_milliseconds,
+                          uint8_t periodic_flag)
 {
   if (idx < SSRN_NUM_TIMERS){
     ssrn_timers[idx].begin_milliseconds = ssrn_milliseconds();
     ssrn_timers[idx].duration_milliseconds = duration_milliseconds;
-    ssrn_timers[idx].type = SSRN_TIMER_TYPE_EVENT;
+    if (periodic_flag){
+      ssrn_timers[idx].type = SSRN_TIMER_TYPE_PERIODIC_EVENT;
+    } else {
+      ssrn_timers[idx].type = SSRN_TIMER_TYPE_EVENT;
+    }
   }
 }
 
 void ssrn_set_timer_callback(uint8_t idx,
                              uint32_t duration_milliseconds,
-                             void (*callback)(void))
+                             void (*callback)(void),
+                             uint8_t periodic_flag)
 {
   if (idx < SSRN_NUM_TIMERS){
     ssrn_timers[idx].begin_milliseconds = ssrn_milliseconds();
     ssrn_timers[idx].duration_milliseconds = duration_milliseconds;
-    ssrn_timers[idx].callback = callback;    
-    ssrn_timers[idx].type = SSRN_TIMER_TYPE_CALLBACK;
+    ssrn_timers[idx].callback = callback;
+    if (periodic_flag){
+      ssrn_timers[idx].type = SSRN_TIMER_TYPE_PERIODIC_CALLBACK;
+    } else {
+      ssrn_timers[idx].type = SSRN_TIMER_TYPE_CALLBACK;
+    }
   }
 }
 
@@ -506,12 +527,25 @@ ssrn_event_t *ssrn_next_event(void)
       if (SSRN_TIMER_TYPE_INACTIVE != ssrn_timers[i].type &&
           (ssrn_milliseconds() - ssrn_timers[i].begin_milliseconds) >
           ssrn_timers[i].duration_milliseconds){
-        ssrn_timers[i].type = SSRN_TIMER_TYPE_INACTIVE;
-        if (SSRN_TIMER_TYPE_EVENT == ssrn_timers[i].type){
+
+        if (SSRN_TIMER_TYPE_EVENT == ssrn_timers[i].type ||
+            SSRN_TIMER_TYPE_CALLBACK == ssrn_timers[i].type){
+          // one-shot timers
+          ssrn_timers[i].type = SSRN_TIMER_TYPE_INACTIVE;
+        } else {
+          // periodic timers
+          ssrn_timers[i].begin_milliseconds += 
+            ssrn_timers[i].duration_milliseconds;
+        }
+
+        if (SSRN_TIMER_TYPE_EVENT == ssrn_timers[i].type ||
+            SSRN_TIMER_TYPE_PERIODIC_EVENT == ssrn_timers[i].type){
+          // event timers
           timer_event.type = SSRN_EVENT_TIMER;
           timer_event.timer_idx = i;
           return &timer_event;
         } else {
+          // callback timers
           ssrn_timers[i].callback();
         }
       }
@@ -578,7 +612,7 @@ ssrn_event_t *ssrn_next_event(void)
   }
 }
 
-void ssrn_network(void)
+static void ssrn_network(void)
 {
   enum {RX_STATE_IDLE,
         RX_STATE_SCANNING,
@@ -746,26 +780,44 @@ void ssrn_network(void)
     }
   }
 
-  if (0 == rx_queue_items &&
+  if (RX_STATE_IDLE == rx_state &&
+      NETSTACK_STATE_IDLE == netstack_state &&
+      TX_STATE_IDLE == tx_state &&
+      0 == rx_queue_items &&
       0 == in_queue_items &&
       0 == tx_queue_items){
-    ssrn_idle();
+      ssrn_idle();
   }
 }
 
 void ssrn_yield(void)
 {
+  static uint8_t already_yielding = 0;
+
+  // prevent recursive yield calls from callbacks
+  if (already_yielding){
+    return;
+  }
+  already_yielding = 1;
+
   ssrn_network();
   
 #ifdef SSRN_USE_TIMERS
-    // process timer callback events
-    for (uint8_t i=0; i<SSRN_NUM_TIMERS; i++){
-      if (SSRN_TIMER_TYPE_CALLBACK == ssrn_timers[i].type &&
-          (ssrn_milliseconds() - ssrn_timers[i].begin_milliseconds) >
-          ssrn_timers[i].duration_milliseconds){
+  // process timer callback events
+  for (uint8_t i=0; i<SSRN_NUM_TIMERS; i++){
+    if ((SSRN_TIMER_TYPE_CALLBACK == ssrn_timers[i].type ||
+         SSRN_TIMER_TYPE_PERIODIC_CALLBACK == ssrn_timers[i].type) &&
+        (ssrn_milliseconds() - ssrn_timers[i].begin_milliseconds) >
+        ssrn_timers[i].duration_milliseconds){
+      if (SSRN_TIMER_TYPE_CALLBACK == ssrn_timers[i].type){
         ssrn_timers[i].type = SSRN_TIMER_TYPE_INACTIVE;
-        ssrn_timers[i].callback();
+      } else {
+        ssrn_timers[i].begin_milliseconds +=
+          ssrn_timers[i].duration_milliseconds;
       }
+      ssrn_timers[i].callback();
     }
+  }
 #endif //#ifdef SSRN_USE_TIMERS
+  already_yielding = 0;  
 }

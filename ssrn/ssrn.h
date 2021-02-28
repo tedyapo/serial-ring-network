@@ -39,7 +39,9 @@ typedef struct
 
 typedef enum {SSRN_TIMER_TYPE_INACTIVE,
               SSRN_TIMER_TYPE_EVENT,
-              SSRN_TIMER_TYPE_CALLBACK} ssrn_timer_type_t;
+              SSRN_TIMER_TYPE_CALLBACK,
+              SSRN_TIMER_TYPE_PERIODIC_EVENT,
+              SSRN_TIMER_TYPE_PERIODIC_CALLBACK} ssrn_timer_type_t;
 
 typedef struct
 {
@@ -70,14 +72,8 @@ void ssrn_pkt_ascii_uint32(ssrn_packet_t *p,
                            uint32_t value,
                            uint8_t decimal_place);
 
-void ssrn_network(void);
 void ssrn_yield(void);
-
-void ssrn_processing(void);
-void ssrn_main_loop(void);
-
 ssrn_event_t *ssrn_next_event(void);
-
 void ssrn_no_reply(ssrn_event_t *event);
 void ssrn_unknown_packet(ssrn_event_t *event);
 
