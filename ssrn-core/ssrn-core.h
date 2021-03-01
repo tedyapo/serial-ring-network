@@ -63,6 +63,7 @@ typedef enum {SSRN_BAUD_1200,
               SSRN_BAUD_460800} ssrn_baud_rate_t;
 
 uint8_t ssrn_pkt_type_eq(uint8_t *t, const char *c);
+int32_t ssrn_pkt_get_int(uint8_t *p);
 void ssrn_pkt_char(ssrn_packet_t *p, char c);
 void ssrn_pkt_str(ssrn_packet_t *p, const char *c);
 void ssrn_pkt_ascii_int32(ssrn_packet_t *p,

@@ -275,6 +275,31 @@ static uint8_t validate_packet(ssrn_packet_t *p)
   return 1;
 }
 
+int32_t ssrn_pkt_get_int(uint8_t *p)
+{
+  uint8_t negative = 0;
+  int32_t value = 0;
+  while(' ' == *p){
+    p++;
+  }
+  if ('-' == *p){
+    p++;
+    negative = 1;
+  }
+  while(*p != '|' && *p != '\n'){
+    if (*p >= '0' && *p <= '9'){
+      value = (value << 3) + (value << 1) + (*p - '0');
+    } else {
+      return 0;
+    }
+    p++;
+  }
+  if (negative){
+    value = -value;
+  }
+  return value;
+}
+
 void ssrn_pkt_char(ssrn_packet_t *p, char c)
 {
   *p->write_ptr++ = c;
@@ -705,19 +730,10 @@ static void ssrn_network(void)
       }
     } else {
       // can't get a spot in the input queue; drop if rx_queue is full
-      //   or try to forward bcast packets
-
-//!!!!!!!!!!!!! this is problematic; must drop broadcasts uniformly
-// since forwarded bcast packet acts as response
       if (rx_queue_full()){
-        if (SSRN_ADDR_CODE_BROADCAST == 
-            rx_queue[netstack_rx_queue_idx].dst_addr_code){
-          netstack_state = NETSTACK_STATE_FORWARDING;
-        } else {
-          rx_queue_get_release();
-          netstack_inbound_drop_count++;
-          netstack_state = NETSTACK_STATE_IDLE;
-        }
+        rx_queue_get_release();
+        netstack_inbound_drop_count++;
+        netstack_state = NETSTACK_STATE_IDLE;
       }
     }
   }
@@ -793,13 +809,13 @@ void ssrn_yield(void)
 {
   static uint8_t already_yielding = 0;
 
+  ssrn_network();
+
   // prevent recursive yield calls from callbacks
   if (already_yielding){
     return;
   }
   already_yielding = 1;
-
-  ssrn_network();
   
 #ifdef SSRN_USE_TIMERS
   // process timer callback events

@@ -61,7 +61,7 @@ def processing_task(input_queue):
 
         key = int(p.fields[3])
         if key in outstanding:
-            print('received: ' + outstanding[int(p.fields[3])])
+            #print('received: ' + outstanding[int(p.fields[3])])
             outstanding.pop(key, None)
         else:
             print('erroneous packet: ' + p.data)
@@ -96,7 +96,6 @@ network.tx_queue.put(p)
 
 time.sleep(2)
 
-
 p = ssrn.Packet()
 data ='$SRN|+999|-999|%04d|BAUD|115200' % -3
 p.set_data(data)
@@ -108,7 +107,6 @@ network.flush_output()
 
 time.sleep(1)
 network.set_baud(115200);
-
 
 p = ssrn.Packet()
 data ='$SRN|+001|-999|%04d|RESET-STATS' % -2
@@ -136,10 +134,12 @@ for seq_num in range(10000000):
     if quit_signal:
         break
     p = ssrn.Packet()
-    if seq_num % 2:
-        data = '$SRN|+001|-999|%04d|READ' % (seq_num % 10000)
-    else:
+    if seq_num % 5:
         data ='$SRN|+001|-999|%04d|LED-BLINK' % (seq_num % 10000)
+        extra_delay = 0
+    else:
+        data = '$SRN|+001|-999|%04d|READ' % (seq_num % 10000)
+        extra_delay = 0.04
     p.set_data(data)
     lock.acquire()
     key = seq_num % 10000
@@ -148,7 +148,8 @@ for seq_num in range(10000000):
         missing_count += 1
     outstanding[key] = ('seq%d:' % key) + data
     lock.release()
-    network.send_timed(p, 1.7)
+    network.send_timed(p, 1.25)
+    time.sleep(extra_delay)
 
 time.sleep(0.25)
 
@@ -176,7 +177,7 @@ lock.acquire()
 print()
 
 for i in outstanding:
-    print('missing:', outstanding[i])
+    #print('missing:', outstanding[i])
     missing_count += 1
     missing = True
 lock.release()
