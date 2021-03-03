@@ -198,6 +198,10 @@ static uint8_t check_checksum(uint8_t *c, uint8_t update)
 
 static uint8_t validate_packet(ssrn_packet_t *p)
 {
+  // $SRN|+DST|+SRC|
+  // 000000000011111
+  // 012345678901234
+
   if (p->data[0] != '$' ||
       p->data[1] != 'S' ||
       p->data[2] != 'R' ||
@@ -232,6 +236,7 @@ static uint8_t validate_packet(ssrn_packet_t *p)
     d[7] = (uint8_t)(r + '0');
     d[6] = (uint8_t)(q + '0');
   }
+
   switch(dst_addr){
     case SSRN_ADDRESS_LOCALHOST:
       p->dst_addr_code = SSRN_ADDR_CODE_LOCALHOST;
@@ -239,13 +244,14 @@ static uint8_t validate_packet(ssrn_packet_t *p)
     case SSRN_ADDRESS_BROADCAST:
       p->dst_addr_code = SSRN_ADDR_CODE_BROADCAST;
       break;
-    case SSRN_ADDRESS_CONTROLLER:
-      p->dst_addr_code = SSRN_ADDR_CODE_CONTROLLER;
-      break;
     default:
       p->dst_addr_code = SSRN_ADDR_CODE_FORWARD;
       break;
   }
+
+  // $SRN|-DST|+SRC|
+  // 000000000011111
+  // 012345678901234
 
   int16_t src_addr = d[11] - '0';
   src_addr = ((int16_t)(src_addr<<3) +
@@ -262,9 +268,9 @@ static uint8_t validate_packet(ssrn_packet_t *p)
     uint16_t q, r;
     if (src_addr >= 0){
       d[10] = '+';
-      uint16div10((uint16_t)dst_addr, &q, &r);
+      uint16div10((uint16_t)src_addr, &q, &r);
     } else {
-      uint16div10((uint16_t)-dst_addr, &q, &r);
+      uint16div10((uint16_t)-src_addr, &q, &r);
     }
     d[13] = (uint8_t)(r + '0');
     uint16div10(q, &q, &r);
@@ -422,7 +428,7 @@ static void process_network_packet(ssrn_event_t *event)
       while (*p->write_ptr++ != '|');
       ssrn_pkt_str(p, "UNKNOWN-BAUD|*");
     }
-    // normal reply identical to request
+    // reply identical to request
   } else if (ssrn_pkt_type_eq(t, "PACKET-STATS|")){
     event->packet_class = SSRN_PACKET_CLASS_NETWORK;
     // $SRN|+NNN|+NNN|NNNN|PACKET-STATS|
@@ -531,6 +537,20 @@ void ssrn_unknown_packet(ssrn_event_t *event)
   event->packet_class = SSRN_PACKET_CLASS_UNKNOWN;
 }
 
+
+static void ssrn_copy_packet(ssrn_packet_t *src,
+                             ssrn_packet_t *dst)
+{
+  dst->dst_addr_code = src->dst_addr_code;
+
+  uint8_t idx = 0;
+  uint8_t *s = src->data;
+  uint8_t *d = dst->data;
+  do {
+    *d++ = *s;
+  } while (*s++ != '\n' && ++idx < SSRN_MAX_PACKET_LEN);
+}
+
 ssrn_event_t *ssrn_next_event(void)
 {
   enum {PROCESSING_STATE_IDLE,
@@ -604,13 +624,14 @@ ssrn_event_t *ssrn_next_event(void)
     }
     
     if (PROCESSING_STATE_USER == processing_state){
-      if (SSRN_PACKET_CLASS_UNKNOWN == packet_event.packet_class){
-        // repond to unknown packet type/request
-        packet_event.packet->write_ptr = packet_event.packet->data + 20;
-        ssrn_pkt_str(packet_event.packet, "UNKNOWN|*");
-        processing_state = PROCESSING_STATE_OUTPUT_WAIT;
-      } else if (packet_event.packet_has_reply){
-        processing_state = PROCESSING_STATE_OUTPUT_WAIT;
+      if (packet_event.packet_has_reply){
+        processing_state = PROCESSING_STATE_OUTPUT_WAIT;        
+        if (SSRN_PACKET_CLASS_UNKNOWN == packet_event.packet_class){
+          // repond to unknown packet type/request
+          packet_event.packet->write_ptr = packet_event.packet->data + 20;
+          ssrn_pkt_str(packet_event.packet, "UNKNOWN|*");
+          processing_state = PROCESSING_STATE_OUTPUT_WAIT;
+        }
       } else {
         in_queue_get_release();
         processing_state = PROCESSING_STATE_IDLE;
@@ -622,13 +643,8 @@ ssrn_event_t *ssrn_next_event(void)
       if (tx_queue_idx >= 0){
         // calculate checksum for packet
         check_checksum(in_queue[in_queue_idx].data, 1);
-        // copy packet to output queue
-        uint8_t idx = 0;
-        uint8_t *s = in_queue[in_queue_idx].data; 
-        uint8_t *d = tx_queue[tx_queue_idx].data;
-        do {
-          *d++ = *s;
-        } while (*s++ != '\n' && ++idx < SSRN_MAX_PACKET_LEN);
+        ssrn_copy_packet(&in_queue[in_queue_idx],
+                         &tx_queue[tx_queue_idx]);
         in_queue_get_release();
         processing_state = PROCESSING_STATE_IDLE;
       }
@@ -714,12 +730,8 @@ static void ssrn_network(void)
     int8_t in_queue_idx = in_queue_put();
     if (in_queue_idx >= 0){
       // this packet is for us; enqueue for processing
-      uint8_t idx = 0;
-      uint8_t *s = rx_queue[netstack_rx_queue_idx].data;
-      uint8_t *d = in_queue[in_queue_idx].data;
-      do {
-        *d++ = *s;
-      } while (*s++ != '\n' && ++idx < SSRN_MAX_PACKET_LEN);
+      ssrn_copy_packet(&rx_queue[netstack_rx_queue_idx],
+                       &in_queue[in_queue_idx]);
       netstack_inbound_count++;
       if (SSRN_ADDR_CODE_BROADCAST == 
           rx_queue[netstack_rx_queue_idx].dst_addr_code){
@@ -743,12 +755,8 @@ static void ssrn_network(void)
     netstack_tx_queue_idx = tx_queue_put();
     if (netstack_tx_queue_idx >= 0){
       // forward packet
-      uint8_t idx = 0;
-      uint8_t *s = rx_queue[netstack_rx_queue_idx].data;
-      uint8_t *d = tx_queue[netstack_tx_queue_idx].data;
-      do {
-        *d++ = *s;
-      } while (*s++ != '\n' && ++idx < SSRN_MAX_PACKET_LEN);
+      ssrn_copy_packet(&rx_queue[netstack_rx_queue_idx],
+                       &tx_queue[netstack_tx_queue_idx]);
       check_checksum(tx_queue[netstack_tx_queue_idx].data, 1);
       netstack_forwarded_count++;
       rx_queue_get_release();

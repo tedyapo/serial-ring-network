@@ -87,14 +87,14 @@ print('hard reset')
 network.hard_reset()
 time.sleep(1)
 
-print('sending')
-
+# NB: soft reset can't be broadcast; dropped at first node
+print('soft reset')
 p = ssrn.Packet()
-data ='$SRN|+001|-999|%04d|RESET' % -2
+data ='$SRN|+002|-999|%04d|RESET' % -2
 p.set_data(data)
 network.tx_queue.put(p)
+time.sleep(1)
 
-time.sleep(2)
 
 p = ssrn.Packet()
 data ='$SRN|+999|-999|%04d|BAUD|115200' % -3
@@ -108,13 +108,15 @@ network.flush_output()
 time.sleep(1)
 network.set_baud(115200);
 
+
 p = ssrn.Packet()
-data ='$SRN|+001|-999|%04d|RESET-STATS' % -2
+data ='$SRN|+999|-999|%04d|RESET-STATS' % -2
 p.set_data(data)
 lock.acquire()
 outstanding[-2] = ('seq%d:' % -2) + data
 lock.release()
 network.tx_queue.put(p)
+
 
 time.sleep(0.25)
 
@@ -130,16 +132,24 @@ def quit_handler(signum, frame):
 signal.signal(signal.SIGINT, quit_handler)
 
 for seq_num in range(10000000):
-#for seq_num in range(10000):
+#for seq_num in range(10):
     if quit_signal:
         break
     p = ssrn.Packet()
+
+    #data ='$SRN|+002|-999|%04d|LED-BLINK' % (seq_num % 10000)
+    #extra_delay = 0
+
+    #data ='$SRN|+001|-999|%04d|LED-BLINK' % (seq_num % 10000)
+    #extra_delay = 0.1
+    extra_delay = 0
     if seq_num % 5:
-        data ='$SRN|+001|-999|%04d|LED-BLINK' % (seq_num % 10000)
+        data ='$SRN|+999|-999|%04d|LED-BLINK' % (seq_num % 10000)
         extra_delay = 0
     else:
-        data = '$SRN|+001|-999|%04d|READ' % (seq_num % 10000)
+        data = '$SRN|+002|-999|%04d|READ' % (seq_num % 10000)
         extra_delay = 0.04
+
     p.set_data(data)
     lock.acquire()
     key = seq_num % 10000
@@ -153,6 +163,7 @@ for seq_num in range(10000000):
 
 time.sleep(0.25)
 
+
 p = ssrn.Packet()
 data ='$SRN|+001|-999|%04d|PACKET-STATS' % -1
 p.set_data(data)
@@ -161,7 +172,7 @@ outstanding[-1] = ('seq%d:' % -1) + data
 lock.release()
 network.tx_queue.put(p)
 
-time.sleep(0.25)
+time.sleep(0.1)
 
 p = ssrn.Packet()
 data ='$SRN|+001|-999|%04d|ERROR-STATS' % -4
@@ -170,6 +181,26 @@ lock.acquire()
 outstanding[-4] = ('seq%d:' % -4) + data
 lock.release()
 network.tx_queue.put(p)
+
+
+p = ssrn.Packet()
+data ='$SRN|+002|-999|%04d|PACKET-STATS' % -5
+p.set_data(data)
+lock.acquire()
+outstanding[-5] = ('seq%d:' % -5) + data
+lock.release()
+network.tx_queue.put(p)
+
+time.sleep(0.1)
+
+p = ssrn.Packet()
+data ='$SRN|+002|-999|%04d|ERROR-STATS' % -6
+p.set_data(data)
+lock.acquire()
+outstanding[-6] = ('seq%d:' % -6) + data
+lock.release()
+network.tx_queue.put(p)
+
 
 time.sleep(3)
 

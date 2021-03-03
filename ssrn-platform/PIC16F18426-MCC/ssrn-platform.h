@@ -4,6 +4,9 @@
 // turn off "unused function" warnings in xc8
 #pragma warning disable 520
 
+// turn off "duplicated function" warnings in xc8
+#pragma warning disable 1510
+
 #include <stdint.h>
 
 #include "mcc.h"

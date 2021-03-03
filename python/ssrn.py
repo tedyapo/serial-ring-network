@@ -82,14 +82,18 @@ def _transmit_task(port, queue):
 def _receive_task(port, queue):
     while True:
         try:
-            data = port.read_until(b'\n').decode('ascii', errors='strict').rstrip()
+            raw = port.read_until(b'\n')
+            data = raw.decode('ascii', errors='strict').rstrip()
         except UnicodeDecodeError:
+            print('decode error: ', raw)
             continue
         #print('rx: ' + data)
         packet = Packet()
         if packet.decode(data):
             #print('rx: ', packet.data)
             queue.put(packet)
+        else:
+            print('rx error')
 
 def _forwarding_task(input_queue, rx_queue, tx_queue):
     while True:
@@ -136,6 +140,9 @@ class SSRN:
 
     def set_baud(self, baud):
         self.port.baudrate = baud
+
+    def discard_input(self):
+        self.port.reset_input_buffer();
 
     def flush_output(self):
         while not self.tx_queue.empty():
