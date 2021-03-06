@@ -93,7 +93,7 @@ def _receive_task(port, queue):
             #print('rx: ', packet.data)
             queue.put(packet)
         else:
-            print('rx error')
+            print('rx error:', data)
 
 def _forwarding_task(input_queue, rx_queue, tx_queue):
     while True:
@@ -138,6 +138,9 @@ class SSRN:
         if self.type == SSRN.NODE:
             self.fwd_thread.start()
 
+    def get_baud(self):
+        return self.port.baudrate
+
     def set_baud(self, baud):
         self.port.baudrate = baud
 
@@ -163,12 +166,15 @@ class SSRN:
 # !!! to-do: create exception classes for network
     def hard_reset(self):
         if not self.port.dsr:
+            print('dsr not high')
             raise IOError
         self.port.dtr = 0
         time.sleep(0.001)
         if self.port.dsr:
+            print('dsr not low')
             raise IOError
         self.port.dtr = 1
         if not self.port.dsr:
+            print('dsr not high')
             raise IOError
 

@@ -88,12 +88,14 @@ network.hard_reset()
 time.sleep(1)
 
 # NB: soft reset can't be broadcast; dropped at first node
+"""
 print('soft reset')
 p = ssrn.Packet()
 data ='$SRN|+002|-999|%04d|RESET' % -2
 p.set_data(data)
 network.tx_queue.put(p)
 time.sleep(1)
+"""
 
 
 p = ssrn.Packet()
@@ -107,6 +109,8 @@ network.flush_output()
 
 time.sleep(1)
 network.set_baud(115200);
+time.sleep(1)
+#network.discard_input()
 
 
 p = ssrn.Packet()
@@ -143,12 +147,19 @@ for seq_num in range(10000000):
     #data ='$SRN|+001|-999|%04d|LED-BLINK' % (seq_num % 10000)
     #extra_delay = 0.1
     extra_delay = 0
-    if seq_num % 5:
+    if seq_num < 4:
+        data ='$SRN|+%03d|-999|%04d|PING' % (seq_num+1, seq_num % 10000)
+        extra_delay = 0.1
+    elif seq_num == 4:
         data ='$SRN|+999|-999|%04d|LED-BLINK' % (seq_num % 10000)
-        extra_delay = 0
+        extra_delay = 10
     else:
-        data = '$SRN|+002|-999|%04d|READ' % (seq_num % 10000)
-        extra_delay = 0.04
+        if seq_num % 2:
+            data ='$SRN|+999|-999|%04d|LED-BLINK' % (seq_num % 10000)
+            extra_delay = 0
+        else:
+            data = '$SRN|+%03d|-999|%04d|READ' % ((int(seq_num/2) % 4)+1, seq_num % 10000)
+            extra_delay = 0.04
 
     p.set_data(data)
     lock.acquire()
@@ -202,7 +213,7 @@ lock.release()
 network.tx_queue.put(p)
 
 
-time.sleep(3)
+time.sleep(4)
 
 lock.acquire()
 print()
