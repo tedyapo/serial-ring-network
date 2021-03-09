@@ -367,6 +367,55 @@ uint8_t ssrn_pkt_type_eq(uint8_t *t, const char *c)
   }
 }
 
+uint32_t ssrn_pkt_get_hex(uint8_t *p)
+{
+  uint32_t value = 0;
+  while(' ' == *p){
+    p++;
+  }
+  
+  if ('0' == *p){
+    p++;
+    if ('x' == *p ||
+        'X' == *p){
+      p++;
+    }
+  }
+
+  for (uint8_t i = 0; i < 8; i++){
+    if (*p >= '0' && *p <= '9'){
+      value = (value << 4) + *p - '0';
+    } else if (*p >= 'A' && *p <= 'F'){
+      value = (value << 4) + *p - 'A' + 10;
+    } else if (*p >= 'a' && *p <= 'f'){
+      value = (value << 4) + *p - 'a' + 10;
+    } else {
+      return value;
+    }
+    p++;
+  }
+
+  return value;
+}
+
+void ssrn_pkt_hex_uint32(ssrn_packet_t *p,
+                         uint32_t value)
+{
+  uint8_t buf[8];
+  ssrn_pkt_str(p, "0x");
+  for (uint8_t i=0; i<8; i++){
+    buf[i] = value & 0xf;
+    value >>= 4;
+  }
+  for (int8_t i=7; i>0; i--){
+    if (buf[i] <= 9){
+      ssrn_pkt_char(p, '0' + buf[i]);
+    } else {
+      ssrn_pkt_char(p, 'A' + buf[i] - 10);
+    }
+  }    
+}
+
 static void process_network_packet(ssrn_event_t *event)
 {
   ssrn_packet_t *p = event->packet;
@@ -403,26 +452,58 @@ static void process_network_packet(ssrn_event_t *event)
     // 01234567890123456789012345678901
     baud_rate_change = 1;
     uint8_t *s = &p->data[25];
-    if (ssrn_pkt_type_eq(s, "1200")){
+    if (ssrn_pkt_type_eq(s, "1000|")){
+      new_baud_rate = SSRN_BAUD_1000;
+    } else if (ssrn_pkt_type_eq(s, "1200|")){
       new_baud_rate = SSRN_BAUD_1200;
-    } else if (ssrn_pkt_type_eq(s, "2400")){
+    } else if (ssrn_pkt_type_eq(s, "2000|")){
+      new_baud_rate = SSRN_BAUD_2000;
+    } else if (ssrn_pkt_type_eq(s, "2400|")){
       new_baud_rate = SSRN_BAUD_2400;
-    } else if (ssrn_pkt_type_eq(s, "4800")){
+    } else if (ssrn_pkt_type_eq(s, "3200|")){
+      new_baud_rate = SSRN_BAUD_3200;
+    } else if (ssrn_pkt_type_eq(s, "4800|")){
       new_baud_rate = SSRN_BAUD_4800;
-    } else if (ssrn_pkt_type_eq(s, "9600")){
+    } else if (ssrn_pkt_type_eq(s, "5000|")){
+      new_baud_rate = SSRN_BAUD_5000;
+    } else if (ssrn_pkt_type_eq(s, "8000|")){
+      new_baud_rate = SSRN_BAUD_8000;
+    } else if (ssrn_pkt_type_eq(s, "9600|")){
       new_baud_rate = SSRN_BAUD_9600;
-    } else if (ssrn_pkt_type_eq(s, "19200")){
+    } else if (ssrn_pkt_type_eq(s, "10000|")){
+      new_baud_rate = SSRN_BAUD_10000;
+    } else if (ssrn_pkt_type_eq(s, "19200|")){
       new_baud_rate = SSRN_BAUD_19200;
-    } else if (ssrn_pkt_type_eq(s, "38400")){
+    } else if (ssrn_pkt_type_eq(s, "20000|")){
+      new_baud_rate = SSRN_BAUD_20000;
+    } else if (ssrn_pkt_type_eq(s, "32000|")){
+      new_baud_rate = SSRN_BAUD_32000;
+    } else if (ssrn_pkt_type_eq(s, "38400|")){
       new_baud_rate = SSRN_BAUD_38400;
-    } else if (ssrn_pkt_type_eq(s, "57600")){
+    } else if (ssrn_pkt_type_eq(s, "50000|")){
+      new_baud_rate = SSRN_BAUD_50000;
+    } else if (ssrn_pkt_type_eq(s, "57600|")){
       new_baud_rate = SSRN_BAUD_57600;
-    } else if (ssrn_pkt_type_eq(s, "115200")){
+    } else if (ssrn_pkt_type_eq(s, "80000|")){
+      new_baud_rate = SSRN_BAUD_80000;
+    } else if (ssrn_pkt_type_eq(s, "100000|")){
+      new_baud_rate = SSRN_BAUD_100000;
+    } else if (ssrn_pkt_type_eq(s, "115200|")){
       new_baud_rate = SSRN_BAUD_115200;
-    } else if (ssrn_pkt_type_eq(s, "230400")){
+    } else if (ssrn_pkt_type_eq(s, "200000|")){
+      new_baud_rate = SSRN_BAUD_200000;
+    } else if (ssrn_pkt_type_eq(s, "230400|")){
       new_baud_rate = SSRN_BAUD_230400;
-    } else if (ssrn_pkt_type_eq(s, "460800")){
+    } else if (ssrn_pkt_type_eq(s, "320000|")){
+      new_baud_rate = SSRN_BAUD_320000;
+    } else if (ssrn_pkt_type_eq(s, "460800|")){
       new_baud_rate = SSRN_BAUD_460800;
+    } else if (ssrn_pkt_type_eq(s, "500000|")){
+      new_baud_rate = SSRN_BAUD_500000;
+    } else if (ssrn_pkt_type_eq(s, "800000|")){
+      new_baud_rate = SSRN_BAUD_800000;
+    } else if (ssrn_pkt_type_eq(s, "1000000|")){
+      new_baud_rate = SSRN_BAUD_1000000;
     } else {
       baud_rate_change = 0;
       while (*p->write_ptr++ != '|');

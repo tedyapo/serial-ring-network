@@ -51,16 +51,32 @@ typedef struct
   void (*callback)(void);
 } ssrn_timer_t;
 
-typedef enum {SSRN_BAUD_1200,
+typedef enum {SSRN_BAUD_1000,
+              SSRN_BAUD_1200,
+              SSRN_BAUD_2000,
               SSRN_BAUD_2400,
+              SSRN_BAUD_3200,
               SSRN_BAUD_4800,
+              SSRN_BAUD_5000,
+              SSRN_BAUD_8000,
               SSRN_BAUD_9600,
+              SSRN_BAUD_10000,
               SSRN_BAUD_19200,
+              SSRN_BAUD_20000,
+              SSRN_BAUD_32000,
               SSRN_BAUD_38400,
+              SSRN_BAUD_50000,
               SSRN_BAUD_57600,
+              SSRN_BAUD_80000,
+              SSRN_BAUD_100000,
               SSRN_BAUD_115200,
+              SSRN_BAUD_200000,
               SSRN_BAUD_230400,
-              SSRN_BAUD_460800} ssrn_baud_rate_t;
+              SSRN_BAUD_320000,
+              SSRN_BAUD_460800,
+              SSRN_BAUD_500000,
+              SSRN_BAUD_800000,
+              SSRN_BAUD_1000000} ssrn_baud_rate_t;
 
 uint8_t ssrn_pkt_type_eq(uint8_t *t, const char *c);
 int32_t ssrn_pkt_get_int(uint8_t *p);
@@ -72,6 +88,9 @@ void ssrn_pkt_ascii_int32(ssrn_packet_t *p,
 void ssrn_pkt_ascii_uint32(ssrn_packet_t *p,
                            uint32_t value,
                            uint8_t decimal_place);
+uint32_t ssrn_pkt_get_hex(uint8_t *p);
+void ssrn_pkt_hex_uint32(ssrn_packet_t *p,
+                         uint32_t value);
 
 void ssrn_yield(void);
 ssrn_event_t *ssrn_next_event(void);
