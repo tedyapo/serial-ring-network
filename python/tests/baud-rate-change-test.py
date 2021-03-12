@@ -61,8 +61,9 @@ def change_baud(new_baud):
     lock.release()
     network.send_timed(p)
     network.flush_output()
-    num_nodes = 4
+    num_nodes = 10
     time.sleep(10 * (len(p.data)+1) * (num_nodes+1) / network.get_baud())
+    time.sleep(0.1)
     # ideally wait for packet to come back, with timeout
     #   if not, hard reset and try again
     network.set_baud(new_baud);
@@ -129,11 +130,15 @@ signal.siginterrupt(signal.SIGINT, False)
 #             115200, 230400, 460800]
 
 #baud_rates = [1200, 2400, 4800, 9600, 19200, 38400, 57600,
-#             115200, 230400]
+#             115200]#, 230400]
+
+#baud_rates = [1000, 2000, 3200, 5000, 8000,
+#              10000, 20000, 32000, 50000, 80000,
+#              100000]#, 200000]#, 320000, 500000, 800000, 1000000]
 
 baud_rates = [1000, 2000, 3200, 5000, 8000,
               10000, 20000, 32000, 50000, 80000,
-              100000, 200000]#, 320000, 500000, 800000, 1000000]
+              100000, 125000, 160000, 200000]#, 320000,]# 500000]
 
 for baud in baud_rates:
     if quit_signal:

@@ -98,6 +98,12 @@ void ssrn_set_baud_rate(ssrn_baud_rate_t rate)
   case SSRN_BAUD_115200:
     SP1BRG = 68;
     break;
+  case SSRN_BAUD_125000:
+    SP1BRG = 63;
+    break;
+  case SSRN_BAUD_160000:
+    SP1BRG = 49;
+    break;
   case SSRN_BAUD_200000:
     SP1BRG = 39;
     break;

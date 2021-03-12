@@ -490,6 +490,10 @@ static void process_network_packet(ssrn_event_t *event)
       new_baud_rate = SSRN_BAUD_100000;
     } else if (ssrn_pkt_type_eq(s, "115200|")){
       new_baud_rate = SSRN_BAUD_115200;
+    } else if (ssrn_pkt_type_eq(s, "125000|")){
+      new_baud_rate = SSRN_BAUD_125000;
+    } else if (ssrn_pkt_type_eq(s, "160000|")){
+      new_baud_rate = SSRN_BAUD_160000;
     } else if (ssrn_pkt_type_eq(s, "200000|")){
       new_baud_rate = SSRN_BAUD_200000;
     } else if (ssrn_pkt_type_eq(s, "230400|")){
