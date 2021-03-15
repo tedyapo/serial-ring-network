@@ -281,6 +281,14 @@ static uint8_t validate_packet(ssrn_packet_t *p)
   return 1;
 }
 
+uint8_t *ssrn_next_field(uint8_t *p)
+{
+  while(*p++ != '|'){
+    // empty
+  }
+  return p;
+}
+
 int32_t ssrn_pkt_get_int(uint8_t *p)
 {
   uint8_t negative = 0;
