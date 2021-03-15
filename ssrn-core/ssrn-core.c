@@ -283,9 +283,10 @@ static uint8_t validate_packet(ssrn_packet_t *p)
 
 uint8_t *ssrn_next_field(uint8_t *p)
 {
-  while(*p++ != '|'){
-    // empty
+  while(*p != '|' && *p != '*'){
+    p++;
   }
+  p++;
   return p;
 }
 
