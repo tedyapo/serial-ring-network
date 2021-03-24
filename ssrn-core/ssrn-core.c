@@ -416,7 +416,7 @@ void ssrn_pkt_hex_uint32(ssrn_packet_t *p,
     buf[i] = value & 0xf;
     value >>= 4;
   }
-  for (int8_t i=7; i>0; i--){
+  for (int8_t i=7; i>=0; i--){
     if (buf[i] <= 9){
       ssrn_pkt_char(p, '0' + buf[i]);
     } else {

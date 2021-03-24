@@ -151,6 +151,62 @@ void ssrn_idle(void)
   }
 }
 
+/*
+  measure vdd on PIC18F16Q41
+  2.048 V measured w/ 12-bit ADC from Vdd reference
+
+  n = ADC counts
+  n = 4095 * 2.048 / Vdd
+  Vdd = 4095 * 2.048 / n
+  Vdd (mV) = 8386560 / n
+*/
+uint32_t ssrn_voltage_mv(void)
+{
+  // save previous FVR setup
+  uint8_t FVRCON_old = FVRCON;
+
+  // setup FVR
+  FVRCONbits.ADFVR = 0b10; // 2.048 V
+  FVRCONbits.FVREN = 1;
+  while(!FVRCONbits.FVRRDY){
+    ssrn_yield();
+  }
+
+  // save previous ADC setup
+  uint8_t ADCON0_old = ADCON0;
+  uint8_t ADCLK_old = ADCLK;
+  uint8_t ADREF_old = ADREF;
+  uint8_t ADPCH_old = ADPCH;
+  uint16_t ADACQ_old = ADACQ;
+
+  // setup ADC
+  ADCON0bits.FM = 1;
+  ADCON0bits.CS = 0;
+  ADCLK = 7;
+  ADREFbits.NREF = 0;
+  ADREFbits.PREF = 0;
+  ADPCH = 0b111110; // FVR1
+  ADACQ = 1024;
+  ADCON0bits.ON = 1;
+  ADCON0bits.GO = 1;
+  while(ADCON0bits.GO){
+    ssrn_yield();
+  }
+  uint16_t n = (((uint16_t)ADRESH) << 8) | ADRESL;
+  uint32_t Vdd_mV = 8386560UL / n;
+
+  // restore previous FVR setup
+  FVRCON = FVRCON_old;
+
+  // restore previous ADC setup
+  uint8_t ADCON0 = ADCON0_old;
+  uint8_t ADCLK = ADCLK_old;
+  uint8_t ADREF = ADREF_old;
+  uint8_t ADPCH = ADPCH_old;
+  uint16_t ADACQ = ADACQ_old;
+  return Vdd_mV;
+}
+
 #ifdef SSRN_USE_TIMERS
 volatile uint32_t ssrn_millisecond_counter;
 

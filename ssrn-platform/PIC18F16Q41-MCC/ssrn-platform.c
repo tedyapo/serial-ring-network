@@ -150,6 +150,46 @@ void ssrn_idle(void)
   }
 }
 
+/*
+  measure vdd on PIC18F16Q41
+  2.048 V measured w/ 12-bit ADC from Vdd reference
+
+  n = ADC counts
+  n = 4095 * 2.048 / Vdd
+  Vdd = 4095 * 2.048 / n
+  Vdd (mV) = 8386560 / n
+*/
+uint32_t ssrn_voltage_mv(void)
+{
+  // setup FVR
+  FVRCONbits.ADFVR = 0b10; // 2.048 V
+  FVRCONbits.EN = 1;
+  while(!FVRCONbits.RDY){
+    ssrn_yield();
+  }
+
+  // setup ADC
+  ADCON0bits.FM = 1;
+  ADCON0bits.CS = 0;
+  ADCLK = 7;
+  ADREFbits.NREF = 0;
+  ADREFbits.PREF = 0;
+  ADPCH = 0b00111110;
+  ADACQ = 1024;
+  ADCON0bits.ON = 1;
+  ADCON0bits.GO = 1;
+  while(ADCON0bits.GO){
+    ssrn_yield();
+  }
+  uint16_t n = (((uint16_t)ADRESH) << 8) | ADRESL;
+  uint32_t Vdd_mV = 8386560UL / n;
+
+  // disable for power savings
+  FVRCONbits.EN = 0;
+  ADCON0bits.ON = 0;
+  return Vdd_mV;
+}
+
 #ifdef SSRN_USE_TIMERS
 volatile uint32_t ssrn_millisecond_counter;
 

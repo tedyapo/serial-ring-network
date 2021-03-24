@@ -23,6 +23,7 @@ uint8_t ssrn_local_packet(ssrn_packet_t *p);
 void ssrn_init(void);
 void ssrn_reset(void);
 void ssrn_idle(void);
+uint32_t ssrn_voltage_mv(void);
 
 #ifdef SSRN_USE_TIMERS
 extern volatile uint32_t ssrn_millisecond_counter;
