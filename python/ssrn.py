@@ -162,18 +162,31 @@ class SSRN:
         #print(delay)
         time.sleep(delay)
         
-
 # !!! to-do: create exception classes for network
     def hard_reset(self):
+        count = 0
+        while count < 20 and not self.port.dsr:
+            print(count)
+            time.sleep(0.1)
+            count += 1
         if not self.port.dsr:
             print('dsr not high')
             raise IOError
         self.port.dtr = 0
-        time.sleep(0.001)
+        count = 0
+        while count < 20 and self.port.dsr:
+            print(count)
+            time.sleep(0.1)
+            count += 1
         if self.port.dsr:
             print('dsr not low')
             raise IOError
         self.port.dtr = 1
+        count = 0
+        while count < 20 and not self.port.dsr:
+            print(count)
+            time.sleep(0.1)
+            count += 1
         if not self.port.dsr:
             print('dsr not high')
             raise IOError

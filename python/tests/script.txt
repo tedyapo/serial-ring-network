@@ -1,0 +1,12 @@
+baud 115200
+discover
+led-blink 1 10
+delay 0.5 
+led-on all
+delay 0.5
+led-off all
+delay 0.5 
+led-on all
+delay 0.5
+led-off all
+exit

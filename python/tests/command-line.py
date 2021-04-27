@@ -147,6 +147,9 @@ class SSRN_Shell(cmd.Cmd):
     def do_baud(self, arg):
         new_baud = int(arg)
         change_baud(new_baud)
+    def do_delay(self, arg):
+        duration = float(arg)
+        time.sleep(duration)
     def default(self, arg):
         fields = arg.upper().split()
         if len(fields) == 2:
